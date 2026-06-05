@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cheer ASCII Studio</title>
+    <style>
+      :root {
+        --bg: #14151a;
+        --panel: #1e2027;
+        --line: #2c2f3a;
+        --fg: #e6e6ec;
+        --mut: #9aa0ad;
+        --acc: #5b8cff;
+        --sel: #3ddc84;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
+      }
+      header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 10px 16px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      header h1 {
+        font-size: 15px;
+        margin: 0 12px 0 0;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin-left: auto;
+      }
+      .tab {
+        padding: 6px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #262833;
+        cursor: pointer;
+      }
+      .tab.active {
+        background: var(--acc);
+        border-color: var(--acc);
+      }
+      label {
+        color: var(--mut);
+        font-size: 12px;
+      }
+      select,
+      input,
+      button {
+        font: inherit;
+        color: var(--fg);
+        background: #262833;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 7px 10px;
+      }
+      button {
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--acc);
+        border-color: var(--acc);
+      }
+      button.ok {
+        background: var(--sel);
+        border-color: var(--sel);
+        color: #06281a;
+      }
+      button.bad {
+        background: #3a2730;
+        border-color: #5a3340;
+      }
+      main {
+        padding: 16px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      section {
+        display: none;
+      }
+      section.active {
+        display: block;
+      }
+      .pill {
+        font-size: 12px;
+        color: var(--mut);
+      }
+      .bar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .cv {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .cv {
+          grid-template-columns: 1fr;
+        }
+      }
+      #imgwrap {
+        position: relative;
+        display: inline-block;
+        max-width: 100%;
+        line-height: 0;
+        user-select: none;
+        touch-action: none;
+        cursor: crosshair;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      #orig {
+        display: block;
+        max-width: 100%;
+        max-height: 70vh;
+        pointer-events: none;
+        -webkit-user-drag: none;
+        user-select: none;
+      }
+      #cropbox {
+        position: absolute;
+        border: 2px dashed var(--sel);
+        background: rgba(61, 220, 132, 0.12);
+        pointer-events: none;
+        display: none;
+      }
+      #cvimg {
+        max-width: 100%;
+        max-height: 30vh;
+        border-radius: 10px;
+        background: #0c0d11;
+        display: block;
+        margin-bottom: 8px;
+      }
+      pre.braille {
+        background: #0c0d11;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        overflow: auto;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 8px;
+        /* braille cell is 2 dots wide x 4 tall; mono advance ~0.6em, so line-height
+           1.2em makes each cell ~1:2 and keeps the portrait's true aspect ratio */
+        line-height: 1.2;
+        letter-spacing: 0;
+        white-space: pre;
+      }
+      pre.gal {
+        font-size: 7px;
+      }
+      .galitem {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        margin-bottom: 10px;
+      }
+      .toast {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #262833;
+        border: 1px solid var(--line);
+        padding: 8px 14px;
+        border-radius: 10px;
+        opacity: 0;
+        transition: 0.2s;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Cheer ASCII Studio</h1>
+      <label>subject</label>
+      <select id="subjectSel"></select>
+      <div class="tabs">
+        <div class="tab active" data-t="convert">Convert</div>
+        <div class="tab" data-t="gallery">Gallery</div>
+      </div>
+    </header>
+
+    <main>
+      <!-- CONVERT -->
+      <section id="convert" class="active">
+        <div class="bar">
+          <button id="prev">◀ prev</button>
+          <span class="pill" id="pos">0 / 0</span>
+          <button id="next">next ▶</button>
+          <button id="reset">Reset crop (full)</button>
+          <label>style</label>
+          <select id="method">
+            <option value="hybrid">tonal + contour</option>
+            <option value="tonal">tonal (most shading)</option>
+            <option value="contour">contour (line art)</option>
+          </select>
+          <label>detail</label>
+          <select id="width">
+            <option value="56">small</option>
+            <option value="72" selected>medium</option>
+            <option value="96">large</option>
+          </select>
+          <label><input type="checkbox" id="rbg" checked /> remove bg</label>
+          <label><input type="checkbox" id="inv" /> invert</label>
+          <button class="ok" id="keep">✅ Keep</button>
+          <button class="bad" id="discard">🗑 Discard</button>
+          <button id="refresh">⟳ Reload</button>
+          <span class="pill"
+            >Drag on the image to crop (head &amp; shoulders). Braille is auto: bg removed, auto-contrast,
+            tonal+contour.</span
+          >
+        </div>
+        <div class="cv">
+          <div>
+            <label>original — drag to crop</label><br />
+            <div id="imgwrap">
+              <img id="orig" alt="" draggable="false" />
+              <div id="cropbox"></div>
+            </div>
+          </div>
+          <div>
+            <label>result</label>
+            <img id="cvimg" alt="" />
+            <pre class="braille" id="cvart"></pre>
+          </div>
+        </div>
+        <p class="pill" id="cvEmpty" style="display: none">No images yet — send some from the browser extension.</p>
+      </section>
+
+      <!-- GALLERY -->
+      <section id="gallery">
+        <div class="bar">
+          <button class="primary" id="exportBtn">Replace live gallery (~/.claude/cheer-gallery)</button>
+          <span class="pill" id="galInfo"></span>
+        </div>
+        <div id="gallist"></div>
+      </section>
+    </main>
+    <div class="toast" id="toast"></div>
+
+    <script>
+      const $ = (s) => document.querySelector(s);
+      const api = (p, b) =>
+        fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then(
+          (r) => r.json(),
+        );
+      const get = (p) => fetch(p).then((r) => r.json());
+      let toastT;
+      function toast(m) {
+        const t = $("#toast");
+        t.textContent = m;
+        t.classList.add("show");
+        clearTimeout(toastT);
+        toastT = setTimeout(() => t.classList.remove("show"), 1600);
+      }
+
+      const S = { subject: "", order: [], i: 0, crop: [0, 0, 1, 1] };
+
+      // ---- tabs ----
+      document.querySelectorAll(".tab").forEach(
+        (t) =>
+          (t.onclick = () => {
+            document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+            document.querySelectorAll("section").forEach((x) => x.classList.remove("active"));
+            t.classList.add("active");
+            $("#" + t.dataset.t).classList.add("active");
+            if (t.dataset.t === "gallery") loadGallery();
+          }),
+      );
+
+      // ---- subject ----
+      async function initSubjects() {
+        const { subjects } = await get("/api/subjects");
+        const sel = $("#subjectSel");
+        sel.innerHTML = "";
+        (subjects || []).forEach((k) => {
+          const o = document.createElement("option");
+          o.value = k;
+          o.textContent = k;
+          sel.appendChild(o);
+        });
+        const oc = document.createElement("option");
+        oc.value = "__custom";
+        oc.textContent = "(custom…)";
+        sel.appendChild(oc);
+        sel.onchange = () => {
+          if (sel.value === "__custom") {
+            const v = (prompt("subject key (e.g. a name)", "") || "").trim();
+            if (!v) {
+              sel.value = S.subject || "__custom";
+              return;
+            }
+            S.subject = v;
+          } else {
+            S.subject = sel.value;
+          }
+          loadCandidates();
+        };
+        if (subjects && subjects.length) {
+          sel.value = subjects[0];
+          S.subject = subjects[0];
+        } else {
+          // fresh install: no subjects yet — prompt for a custom one
+          sel.value = "__custom";
+          const v = (prompt("subject key (e.g. a name)", "") || "").trim();
+          S.subject = v;
+        }
+      }
+
+      async function loadCandidates() {
+        if (!S.subject) {
+          S.order = [];
+          S.i = 0;
+          show();
+          return;
+        }
+        const { candidates } = await get("/api/state?subject=" + encodeURIComponent(S.subject));
+        S.order = candidates;
+        S.i = 0;
+        show();
+      }
+
+      function imgUrl(name) {
+        return (
+          "/thumb?subject=" +
+          encodeURIComponent(S.subject) +
+          "&kind=candidates&name=" +
+          encodeURIComponent(name) +
+          "&w=720"
+        );
+      }
+
+      function show() {
+        const has = S.order.length;
+        $("#cvEmpty").style.display = has ? "none" : "block";
+        $(".cv").style.display = has ? "grid" : "none";
+        if (!has) {
+          $("#pos").textContent = "0 / 0";
+          return;
+        }
+        if (S.i >= has) S.i = has - 1;
+        if (S.i < 0) S.i = 0;
+        $("#pos").textContent = S.i + 1 + " / " + has;
+        const name = S.order[S.i];
+        const orig = $("#orig");
+        orig.onload = () => {
+          S.crop = [0, 0, 1, 1];
+          hideCrop();
+          render();
+        };
+        orig.src = imgUrl(name);
+        $("#cvart").textContent = "…";
+        $("#cvimg").removeAttribute("src");
+      }
+
+      function hideCrop() {
+        $("#cropbox").style.display = "none";
+      }
+
+      async function render() {
+        const name = S.order[S.i];
+        if (!name) return;
+        $("#cvart").textContent = "…rendering…";
+        const r = await api("/api/convert", {
+          subject: S.subject,
+          name,
+          crop: S.crop,
+          method: $("#method").value,
+          width: +$("#width").value,
+          remove_bg: $("#rbg").checked,
+          invert: $("#inv").checked,
+        });
+        $("#cvimg").src = r.img;
+        $("#cvart").textContent = r.braille;
+      }
+      ["method", "width", "rbg", "inv"].forEach((id) => ($("#" + id).onchange = render));
+
+      // ---- crop drag ----
+      (function cropDrag() {
+        const wrap = $("#imgwrap"),
+          boxEl = $("#cropbox"),
+          orig = $("#orig");
+        let drag = false,
+          sx = 0,
+          sy = 0;
+        const rect = () => orig.getBoundingClientRect();
+        wrap.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          const r = rect();
+          drag = true;
+          sx = e.clientX - r.left;
+          sy = e.clientY - r.top;
+          boxEl.style.display = "block";
+          boxEl.style.left = sx + "px";
+          boxEl.style.top = sy + "px";
+          boxEl.style.width = "0px";
+          boxEl.style.height = "0px";
+          wrap.setPointerCapture(e.pointerId);
+        });
+        wrap.addEventListener("pointermove", (e) => {
+          if (!drag) return;
+          const r = rect();
+          let cx = Math.max(0, Math.min(e.clientX - r.left, r.width)),
+            cy = Math.max(0, Math.min(e.clientY - r.top, r.height));
+          const l = Math.min(sx, cx),
+            t = Math.min(sy, cy),
+            w = Math.abs(cx - sx),
+            h = Math.abs(cy - sy);
+          boxEl.style.left = l + "px";
+          boxEl.style.top = t + "px";
+          boxEl.style.width = w + "px";
+          boxEl.style.height = h + "px";
+        });
+        wrap.addEventListener("pointerup", (e) => {
+          if (!drag) return;
+          drag = false;
+          const r = rect();
+          const L = parseFloat(boxEl.style.left),
+            T = parseFloat(boxEl.style.top),
+            W = parseFloat(boxEl.style.width),
+            H = parseFloat(boxEl.style.height);
+          if (W < 6 || H < 6) {
+            hideCrop();
+            return;
+          }
+          S.crop = [L / r.width, T / r.height, (L + W) / r.width, (T + H) / r.height];
+          render();
+        });
+      })();
+
+      $("#reset").onclick = () => {
+        S.crop = [0, 0, 1, 1];
+        hideCrop();
+        render();
+      };
+      $("#prev").onclick = () => {
+        if (S.order.length) {
+          S.i = (S.i - 1 + S.order.length) % S.order.length;
+          show();
+        }
+      };
+      $("#next").onclick = () => {
+        if (S.order.length) {
+          S.i = (S.i + 1) % S.order.length;
+          show();
+        }
+      };
+      $("#refresh").onclick = loadCandidates;
+      function dropCurrent() {
+        S.order.splice(S.i, 1);
+        if (S.i >= S.order.length) S.i = 0;
+        show();
+      }
+      $("#keep").onclick = async () => {
+        const name = S.order[S.i];
+        if (!name) return;
+        await api("/api/keep", { subject: S.subject, name, braille: $("#cvart").textContent });
+        toast("kept");
+        dropCurrent();
+      };
+      $("#discard").onclick = async () => {
+        const name = S.order[S.i];
+        if (!name) return;
+        await api("/api/discard", { subject: S.subject, name });
+        toast("discarded");
+        dropCurrent();
+      };
+
+      // ---- gallery ----
+      async function loadGallery() {
+        const { items } = await get("/api/gallery?subject=" + encodeURIComponent(S.subject));
+        $("#galInfo").textContent = items.length + " kept";
+        const w = $("#gallist");
+        w.innerHTML = "";
+        items.forEach((it) => {
+          const d = document.createElement("div");
+          d.className = "galitem";
+          const pre = document.createElement("pre");
+          pre.className = "braille gal";
+          pre.textContent = it.braille;
+          const b = document.createElement("button");
+          b.className = "bad";
+          b.textContent = "remove";
+          b.onclick = async () => {
+            await api("/api/remove", { subject: S.subject, name: it.name });
+            loadGallery();
+          };
+          d.appendChild(pre);
+          d.appendChild(b);
+          w.appendChild(d);
+        });
+      }
+      $("#exportBtn").onclick = async () => {
+        const r = await api("/api/export", { subject: S.subject });
+        toast("copied " + r.copied + " → live gallery");
+      };
+
+      initSubjects().then(loadCandidates);
+    </script>
+  </body>
+</html>

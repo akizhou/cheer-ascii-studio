@@ -1,0 +1,16 @@
+[project]
+name = "cheer-ascii-studio"
+version = "0.1.0"
+description = "Local human-in-the-loop tool to build a braille portrait gallery of the people and pets you love"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "opencv-python-headless",
+    "rembg",
+    "onnxruntime",
+    "numpy",
+    "pillow",
+    "requests",
+]

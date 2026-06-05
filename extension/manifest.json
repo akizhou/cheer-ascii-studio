@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Cheer Studio Importer",
+  "version": "0.3.0",
+  "description": "Capture images of your favorite people or pets from any site (including a full Instagram carousel scan) and pick which to send to the local Cheer ASCII Studio.",
+  "permissions": ["contextMenus", "storage", "scripting", "activeTab"],
+  "host_permissions": ["http://localhost:8000/*", "http://127.0.0.1:8000/*", "<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Cheer Studio — scan current post & pick" }
+}
