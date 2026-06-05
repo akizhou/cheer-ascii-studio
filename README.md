@@ -52,4 +52,34 @@ studio/
   matte.py            # background removal (rembg, GrabCut fallback) + compose
   braille.py          # image -> braille (tonal / contour / hybrid, bg-aware)
 data/<subject>/       # candidates/ crops/ gallery/ state.json   (git-ignored)
+claude/               # the Cheer Me Up output style + optional welcome-back hook
 ```
+
+## Install the Claude Code side
+
+The gallery is consumed by the **Cheer Me Up** output style for Claude Code, bundled in `claude/`:
+
+```bash
+cp claude/cheer-me-up.md ~/.claude/output-styles/
+```
+
+Activate inside Claude Code with `/output-style Cheer Me Up`. Claude then occasionally pastes a portrait from
+`~/.claude/cheer-gallery/` — when it senses you're frustrated, and sometimes just because.
+
+Optional: the welcome-back hook adds a "first reply after a while" cheer (the model can't perceive idle time on its
+own). Copy it and register it as a `UserPromptSubmit` hook:
+
+```bash
+cp claude/welcome-back-cheer.py ~/.claude/hooks/
+```
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "~/.claude/hooks/welcome-back-cheer.py" }] }]
+  }
+}
+```
+
+(in `~/.claude/settings.json`; idle threshold defaults to 15 min, override with `CHEER_IDLE_SECONDS`). The style works
+fine without the hook — you only lose the welcome-back beat.
