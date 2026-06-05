@@ -31,6 +31,11 @@ session.
 The subject list in the picker is fetched from the local studio; pick an existing subject or type a new key in the
 custom box. If the studio isn't running, it falls back to the last-known list (cached) plus free-text entry.
 
+**Privacy note:** the extension requests the `<all_urls>` host permission so the scan can read images on whatever page
+you invoke it on. It only acts when you explicitly trigger it (toolbar click or context menu), only collects the images
+you then select in the picker, and only sends them to your own machine (`localhost:8000`). It makes no other network
+requests — no analytics, no remote services.
+
 ## Flow in the studio
 
 1. **Pick a subject** — choose an existing subject in the header dropdown, or `(custom…)` to start a new one (e.g. a
