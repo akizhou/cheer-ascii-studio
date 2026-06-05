@@ -230,6 +230,8 @@
           <button class="ok" id="keep">✅ Keep</button>
           <button class="bad" id="discard">🗑 Discard</button>
           <button id="refresh">⟳ Reload</button>
+          <button id="importBtn">📁 Import files</button>
+          <input type="file" id="fileInput" accept="image/*" multiple style="display: none" />
           <span class="pill"
             >Drag on the image to crop (head &amp; shoulders). Braille is auto: bg removed, auto-contrast,
             tonal+contour.</span
@@ -249,7 +251,9 @@
             <pre class="braille" id="cvart"></pre>
           </div>
         </div>
-        <p class="pill" id="cvEmpty" style="display: none">No images yet — send some from the browser extension.</p>
+        <p class="pill" id="cvEmpty" style="display: none">
+          No images yet — import local files (📁 button or drop them here), or send some from the browser extension.
+        </p>
       </section>
 
       <!-- GALLERY -->
@@ -471,6 +475,36 @@
         }
       };
       $("#refresh").onclick = loadCandidates;
+
+      // ---- local file import ----
+      async function importFiles(fileList) {
+        const files = [...fileList].filter(
+          (f) => f.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name),
+        );
+        if (!files.length) return;
+        if (!S.subject) {
+          toast("pick a subject first");
+          return;
+        }
+        const fd = new FormData();
+        fd.append("subject", S.subject);
+        files.forEach((f) => fd.append("files", f));
+        toast("importing " + files.length + "…");
+        const r = await fetch("/api/upload", { method: "POST", body: fd }).then((x) => x.json());
+        toast("added " + r.added + (r.skipped ? " (skipped " + r.skipped + ")" : ""));
+        if (r.added) loadCandidates();
+      }
+      $("#importBtn").onclick = () => $("#fileInput").click();
+      $("#fileInput").onchange = async (e) => {
+        await importFiles(e.target.files);
+        e.target.value = "";
+      };
+      // drop anywhere on the page (the crop drag uses pointer events, so no conflict)
+      document.addEventListener("dragover", (e) => e.preventDefault());
+      document.addEventListener("drop", (e) => {
+        e.preventDefault();
+        if (e.dataTransfer && e.dataTransfer.files.length) importFiles(e.dataTransfer.files);
+      });
       function dropCurrent() {
         S.order.splice(S.i, 1);
         if (S.i >= S.order.length) S.i = 0;

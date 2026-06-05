@@ -158,15 +158,22 @@ def import_urls(u: Urls):
 
 @app.post("/api/upload")
 async def upload(subject: str = Form(...), files: list[UploadFile] = File(...)):
+    """Local file import from the studio UI (multipart). Validates each file is an
+    image and dedupes by content hash, like /api/import_image."""
     cd = sdir(subject) / "candidates"
-    n = 0
+    n, skipped = 0, 0
     for f in files:
+        raw = await f.read()
         try:
-            (cd / f"manual_{os.path.basename(f.filename)}").write_bytes(await f.read())
-            n += 1
+            Image.open(io.BytesIO(raw)).verify()
         except Exception:
-            pass
-    return {"added": n, "candidates": candidates(subject)}
+            skipped += 1
+            continue
+        p = cd / ("file_" + hashlib.md5(raw).hexdigest()[:16] + ".img")
+        if not p.exists():
+            p.write_bytes(raw)
+            n += 1
+    return {"added": n, "skipped": skipped, "candidates": candidates(subject)}
 
 
 @app.post("/api/convert")
